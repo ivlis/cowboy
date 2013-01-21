@@ -36,6 +36,8 @@
 -export([token/2]).
 -export([token_ci/2]).
 -export([quoted_string/2]).
+-export([authorization_basic_userid/2]).
+-export([authorization_basic_password/2]).
 
 %% Decoding.
 -export([te_chunked/2]).
@@ -802,6 +804,39 @@ qvalue(<< C, Rest/binary >>, Fun, Q, M)
 qvalue(Data, Fun, Q, _M) ->
 	Fun(Data, Q).
 
+%% @doc Parse user credentials
+%% userid is defined as *TEXT excluding ":"
+%% password is defined as *TEXT
+-spec authorization_basic_userid(binary(), fun()) -> any().
+authorization_basic_userid(Data, Fun) ->
+	authorization_basic_userid(Data, Fun, <<>>).
+
+authorization_basic_userid(<<>>, _Fun, _Acc) ->
+	{error, badarg};
+authorization_basic_userid(<<C, _Rest/binary>>, _Fun, _Acc)
+	when C < 32; C=:= 127 ->
+	{error, badarg};
+authorization_basic_userid(<<$:, _Rest/binary>>, _Fun, <<>>) ->
+	{error, badarg};
+authorization_basic_userid(<<$:, Rest/binary>>, Fun, Acc) ->
+	Fun(Rest, Acc);
+authorization_basic_userid(<<C, Rest/binary>>, Fun, Acc) ->
+	authorization_basic_userid(Rest, Fun, <<Acc/binary, C>>).
+
+-spec authorization_basic_password(binary(), fun()) -> any().
+authorization_basic_password(Data, Fun) ->
+	authorization_basic_password(Data, Fun, <<>>).
+
+authorization_basic_password(<<>>, _Fun, <<>>) ->
+	{error, badarg};
+authorization_basic_password(<<C, _Rest/binary>>, _Fun, _Acc)
+	when C < 32; C=:= 127 ->
+	{error, badarg};
+authorization_basic_password(<<>>, Fun, Acc) ->
+	Fun(Acc);
+authorization_basic_password(<<C, Rest/binary>>, Fun, Acc) ->
+	authorization_basic_password(Rest, Fun, <<Acc/binary, C>>).
+
 %% Decoding.
 
 %% @doc Decode a stream of chunks.
@@ -1000,16 +1035,18 @@ x_www_form_urlencoded(Qs) ->
 
 %% @doc Parse authorization value according rfc 2617.
 %% Only Basic authorization is supported so far.
--spec authorization(binary(), binary()) -> {binary(), any()}.
+-spec authorization(binary(), binary()) -> {binary(), any()} | {error, badarg}.
 authorization(UserPass, Type = <<"basic">>) -> 
-	{Type, cowboy_http:whitespace(UserPass, 
-			fun(D) ->
-				cowboy_http:token(base64:decode(D), 
-				fun(<< $:, Pass/binary>>, User) -> 
-					{User, Pass} 
-				end) 
-			end)
-	};
+	cowboy_http:whitespace(UserPass,
+		fun(D) ->
+			authorization_basic_userid(base64:decode(D),
+				fun(Rest, Userid) ->
+					case authorization_basic_password(Rest, fun(P) -> P end) of
+						{error, badarg} -> {error, badarg};
+						Password -> {Type, {Userid, Password}}
+					end
+				end)
+		end);
 authorization(String, Type) ->
 	{Type, String}.
 
@@ -1311,8 +1348,13 @@ urlencode_test_() ->
 	].
 
 http_authorization_test_() ->
-	?_assertEqual({<<"basic">>, {<<"Alladin">>, <<"open sesame">>}},
-		authorization(<<"QWxsYWRpbjpvcGVuIHNlc2FtZQ==">>, <<"basic">>)). 
+	[?_assertEqual({<<"basic">>, {<<"Alladin">>, <<"open sesame">>}},
+		authorization(<<"QWxsYWRpbjpvcGVuIHNlc2FtZQ==">>, <<"basic">>)),
+	 ?_assertEqual({error, badarg},
+		authorization(<<"dXNlcm5hbWUK">>, <<"basic">>)),
+	 ?_assertEqual({error, badarg},
+		authorization(<<"dXNlcgg6cGFzcwo=">>, <<"basic">>))
+	]. 
 
 
 -endif.
