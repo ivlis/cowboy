@@ -1045,8 +1045,8 @@ authorization(UserPass, Type = <<"basic">>) ->
 						fun(Password) -> 
 							{Type, {Userid, Password}}
 						end)
-					end)
-				end);
+				end)
+		end);
 authorization(String, Type) ->
 	{Type, String}.
 
