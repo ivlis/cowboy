@@ -1041,12 +1041,12 @@ authorization(UserPass, Type = <<"basic">>) ->
 		fun(D) ->
 			authorization_basic_userid(base64:decode(D),
 				fun(Rest, Userid) ->
-					case authorization_basic_password(Rest, fun(P) -> P end) of
-						{error, badarg} -> {error, badarg};
-						Password -> {Type, {Userid, Password}}
-					end
-				end)
-		end);
+					authorization_basic_password(Rest, 
+						fun(Password) -> 
+							{Type, {Userid, Password}}
+						end)
+					end)
+				end);
 authorization(String, Type) ->
 	{Type, String}.
 
@@ -1353,7 +1353,7 @@ http_authorization_test_() ->
 	 ?_assertEqual({error, badarg},
 		authorization(<<"dXNlcm5hbWUK">>, <<"basic">>)),
 	 ?_assertEqual({error, badarg},
-		authorization(<<"dXNlcgg6cGFzcwo=">>, <<"basic">>))
+		authorization(<<"dXNlcjpwYXNzCA==">>, <<"basic">>))  %% user:pass\010
 	]. 
 
 
