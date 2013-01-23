@@ -32,12 +32,11 @@
 -export([rfc850_date/1]).
 -export([asctime_date/1]).
 -export([whitespace/2]).
+-export([authorization/2]).
 -export([digits/1]).
 -export([token/2]).
 -export([token_ci/2]).
 -export([quoted_string/2]).
--export([authorization_basic_userid/2]).
--export([authorization_basic_password/2]).
 
 %% Decoding.
 -export([te_chunked/2]).
@@ -52,7 +51,6 @@
 -export([urlencode/1]).
 -export([urlencode/2]).
 -export([x_www_form_urlencoded/1]).
--export([authorization/2]).
 
 -type version() :: {Major::non_neg_integer(), Minor::non_neg_integer()}.
 -type headers() :: [{binary(), iodata()}].
@@ -813,10 +811,8 @@ authorization_basic_userid(Data, Fun) ->
 
 authorization_basic_userid(<<>>, _Fun, _Acc) ->
 	{error, badarg};
-authorization_basic_userid(<<C, _Rest/binary>>, _Fun, _Acc)
-	when C < 32; C=:= 127 ->
-	{error, badarg};
-authorization_basic_userid(<<$:, _Rest/binary>>, _Fun, <<>>) ->
+authorization_basic_userid(<<C, _Rest/binary>>, _Fun, Acc)
+		when C < 32; C =:= 127; (C =:=$: andalso Acc =:= <<>>) ->
 	{error, badarg};
 authorization_basic_userid(<<$:, Rest/binary>>, Fun, Acc) ->
 	Fun(Rest, Acc);
@@ -830,7 +826,7 @@ authorization_basic_password(Data, Fun) ->
 authorization_basic_password(<<>>, _Fun, <<>>) ->
 	{error, badarg};
 authorization_basic_password(<<C, _Rest/binary>>, _Fun, _Acc)
-	when C < 32; C=:= 127 ->
+		when C < 32; C=:= 127 ->
 	{error, badarg};
 authorization_basic_password(<<>>, Fun, Acc) ->
 	Fun(Acc);
@@ -1039,7 +1035,7 @@ x_www_form_urlencoded(Qs) ->
 authorization(UserPass, Type = <<"basic">>) -> 
 	cowboy_http:whitespace(UserPass,
 		fun(D) ->
-			authorization_basic_userid(base64:decode(D),
+			authorization_basic_userid(base64:mime_decode(D),
 				fun(Rest, Userid) ->
 					authorization_basic_password(Rest, 
 						fun(Password) -> 
@@ -1352,6 +1348,8 @@ http_authorization_test_() ->
 		authorization(<<"QWxsYWRpbjpvcGVuIHNlc2FtZQ==">>, <<"basic">>)),
 	 ?_assertEqual({error, badarg},
 		authorization(<<"dXNlcm5hbWUK">>, <<"basic">>)),
+	 ?_assertEqual({error, badarg},
+		authorization(<<"$$$$$$$">>, <<"basic">>)),
 	 ?_assertEqual({error, badarg},
 		authorization(<<"dXNlcjpwYXNzCA==">>, <<"basic">>))  %% user:pass\010
 	]. 
