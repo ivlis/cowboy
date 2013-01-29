@@ -1349,7 +1349,7 @@ http_authorization_test_() ->
 	 ?_assertEqual({error, badarg},
 		authorization(<<"dXNlcm5hbWUK">>, <<"basic">>)),
 	 ?_assertEqual({error, badarg},
-		authorization(<<"$$$$$$$">>, <<"basic">>)),
+		 authorization(<<"_[]@#$%^&*()-AA==">>, <<"basic">>)),
 	 ?_assertEqual({error, badarg},
 		authorization(<<"dXNlcjpwYXNzCA==">>, <<"basic">>))  %% user:pass\010
 	]. 
