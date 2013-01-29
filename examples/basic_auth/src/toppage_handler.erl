@@ -1,6 +1,6 @@
 %% Feel free to use, reuse and abuse the code in this file.
 
-%% @doc Hello world handler.
+%% @doc Basic authorization Hello world handler.
 -module(toppage_handler).
 
 -export([init/3]).
@@ -29,3 +29,4 @@ content_types_provided(Req, State) ->
 
 hello_to_text(Req, User) ->
 	{<< <<"Hello, ">>/binary, User/binary, <<"!\n">>/binary >>, Req, User}.
+

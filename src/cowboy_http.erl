@@ -32,11 +32,11 @@
 -export([rfc850_date/1]).
 -export([asctime_date/1]).
 -export([whitespace/2]).
--export([authorization/2]).
 -export([digits/1]).
 -export([token/2]).
 -export([token_ci/2]).
 -export([quoted_string/2]).
+-export([authorization/2]).
 
 %% Decoding.
 -export([te_chunked/2]).
@@ -802,9 +802,7 @@ qvalue(<< C, Rest/binary >>, Fun, Q, M)
 qvalue(Data, Fun, Q, _M) ->
 	Fun(Data, Q).
 
-%% @doc Parse user credentials
-%% userid is defined as *TEXT excluding ":"
-%% password is defined as *TEXT
+%% @doc Parse user credentials.
 -spec authorization_basic_userid(binary(), fun()) -> any().
 authorization_basic_userid(Data, Fun) ->
 	authorization_basic_userid(Data, Fun, <<>>).
@@ -832,6 +830,23 @@ authorization_basic_password(<<>>, Fun, Acc) ->
 	Fun(Acc);
 authorization_basic_password(<<C, Rest/binary>>, Fun, Acc) ->
 	authorization_basic_password(Rest, Fun, <<Acc/binary, C>>).
+
+%% @doc Parse authorization value according rfc 2617.
+%% Only Basic authorization is supported so far.
+-spec authorization(binary(), binary()) -> {binary(), any()} | {error, badarg}.
+authorization(UserPass, Type = <<"basic">>) -> 
+	cowboy_http:whitespace(UserPass,
+		fun(D) ->
+			authorization_basic_userid(base64:mime_decode(D),
+				fun(Rest, Userid) ->
+					authorization_basic_password(Rest, 
+						fun(Password) -> 
+							{Type, {Userid, Password}}
+						end)
+				end)
+		end);
+authorization(String, Type) ->
+	{Type, String}.
 
 %% Decoding.
 
@@ -1028,23 +1043,6 @@ x_www_form_urlencoded(Qs) ->
 		[Token] -> {urldecode(Token), true};
 		[Name, Value] -> {urldecode(Name), urldecode(Value)}
 	end || Token <- Tokens].
-
-%% @doc Parse authorization value according rfc 2617.
-%% Only Basic authorization is supported so far.
--spec authorization(binary(), binary()) -> {binary(), any()} | {error, badarg}.
-authorization(UserPass, Type = <<"basic">>) -> 
-	cowboy_http:whitespace(UserPass,
-		fun(D) ->
-			authorization_basic_userid(base64:mime_decode(D),
-				fun(Rest, Userid) ->
-					authorization_basic_password(Rest, 
-						fun(Password) -> 
-							{Type, {Userid, Password}}
-						end)
-				end)
-		end);
-authorization(String, Type) ->
-	{Type, String}.
 
 %% Tests.
 

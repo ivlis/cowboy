@@ -1,5 +1,5 @@
-Cowboy Basic Authorization Rest Hello World
-=======================
+Cowboy Basic Authorization Rest Hello World.
+============================================
 
 To compile this example you need rebar in your PATH.
 
@@ -19,7 +19,6 @@ Examples
 --------
 
 ### Get 401
-
 ``` bash
 $ curl -i http://localhost:8080
 HTTP/1.1 401 Unauthorized
@@ -31,7 +30,6 @@ www-authenticate: Restricted
 ```
 
 ### Get 200
-
 ``` bash
 curl -i -u "Alladin:open sesame" http://localhost:8080
 HTTP/1.1 200 OK
