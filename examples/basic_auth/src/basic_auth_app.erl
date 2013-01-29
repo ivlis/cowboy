@@ -10,7 +10,7 @@
 
 %% API.
 
-starDispatch = cowboy_router:compile([
+start(_Type, _Args) ->
 	Dispatch = [
 		{'_', [
 			{[], toppage_handler, []}

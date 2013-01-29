@@ -31,7 +31,7 @@ www-authenticate: Restricted
 
 ### Get 200
 ``` bash
-curl -i -u "Alladin:open sesame" http://localhost:8080
+$ curl -i -u "Alladin:open sesame" http://localhost:8080
 HTTP/1.1 200 OK
 connection: keep-alive
 server: Cowboy
